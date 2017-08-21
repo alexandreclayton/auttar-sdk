@@ -22,7 +22,7 @@ var AuttarSDK = (function () {
     var _ws = null;
     var _aOperacoes = [];
 
-    function AuttarSDK(p_url="ws://localhost:2500") {
+    function AuttarSDK(p_url = "ws://localhost:2500") {
         _aOperacoes[6] = {operacao: 6}; // Confirmação
         _aOperacoes[101] = {operacao: 101, valorTransacao: 0}; // Débito
         _aOperacoes[101] = {operacao: 106, valorTransacao: 0}; // Voucher
@@ -37,7 +37,7 @@ var AuttarSDK = (function () {
         _disconnect.bind(this);
     }
 
-    async function _connect(p_oOperacao) {
+    function _connect(p_oOperacao) {
         return new Promise((resolve, reject) => {
             /*
              CONNECTING	0 A conexão ainda não está aberta.
@@ -45,37 +45,34 @@ var AuttarSDK = (function () {
              CLOSING	2 A conexão está em processo de fechamento.
              CLOSED	3 A conexão está fechada ou não foi possível abrir.
              */
-
             if (_ws === null) {
                 _ws = new WebSocket(_url);
             } else {
                 if (_ws.readyState === 2 || _ws.readyState === 3) {
                     _disconnect();
-                    _ws = new WebSocket(_url);
+                    try {
+                        _ws = new WebSocket(_url);
+                    } catch (e) {
+                        reject(e);
+                    }
                 }
             }
-
             _ws.onopen = function () {
                 this.send(JSON.stringify(p_oOperacao));
             };
-
-            _ws.onmessage = function (message) {
-                resolve(message);
+            _ws.onmessage = function (evtMsg) {
+                resolve(evtMsg);
             };
-
-            _ws.onerror = function (error) {
-                reject(error);
+            _ws.onerror = function (evtError) {
+                reject(evtError);
             };
-
-            _ws.onclose = function (event) {
-                console.log("Websocket socket closed: " + JSON.stringify(event));
+            _ws.onclose = function (evtClose) {
+                console.log(evtClose);
             };
         });
     }
 
-
-    async function _disconnect() {
-        console.log("Disconnected from CTFClient");
+    function _disconnect() {
         _ws.close();
     }
 
@@ -92,8 +89,7 @@ var AuttarSDK = (function () {
     AuttarSDK.prototype.Debito = async function (p_valor, p_nOper = 101) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
     /*
      * 
@@ -104,8 +100,7 @@ var AuttarSDK = (function () {
     AuttarSDK.prototype.Voucher = async function (p_valor, p_nOper = 106) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
     /*
      * 
@@ -116,8 +111,7 @@ var AuttarSDK = (function () {
     AuttarSDK.prototype.CreditoAVista = async function (p_valor, p_nOper = 112) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
     /**
      * 
@@ -130,8 +124,7 @@ var AuttarSDK = (function () {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
         operacao.numeroParcelas = p_parcelas;
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
     /**
      * 
@@ -144,8 +137,7 @@ var AuttarSDK = (function () {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
         operacao.numeroParcelas = p_parcelas;
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
 
     /*
@@ -153,14 +145,12 @@ var AuttarSDK = (function () {
      */
     AuttarSDK.prototype.ConfirmaOperacao = async function (p_nOper = 6) {
         const operacao = _aOperacoes[p_nOper];
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
 
     AuttarSDK.prototype.DesfazimentoTotal = async function (p_nOper = 191) {
         const operacao = _aOperacoes[p_nOper];
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
 
     /*
@@ -179,13 +169,8 @@ var AuttarSDK = (function () {
         operacao.valorTransacao = p_valor;
         operacao.dataTransacao = p_dataTransacao;
         operacao.nsuCTF = p_nsuCTF;
-        let retAuttar = await _connect(operacao);
-        return JSON.parse(retAuttar.data);
+        return await _connect(operacao);
     };
 
     return AuttarSDK;
 }());
-
-
-
-
