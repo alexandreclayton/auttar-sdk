@@ -22,7 +22,7 @@ var AuttarSDK = (function () {
     var _ws = null;
     var _aOperacoes = [];
 
-    function AuttarSDK(p_url) {
+    function AuttarSDK(p_url="localhost") {
         _aOperacoes[6] = {operacao: 6}; // Confirmação
         _aOperacoes[101] = {operacao: 101, valorTransacao: 0}; // Débito
         _aOperacoes[101] = {operacao: 106, valorTransacao: 0}; // Voucher
