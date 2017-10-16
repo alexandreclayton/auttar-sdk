@@ -21,11 +21,13 @@ var AuttarSDK = (function () {
     var _url = "";
     var _ws = null;
     var _aOperacoes = [];
+    var _close = true;
+    let _timeoutConn = null;
 
     function AuttarSDK(p_url = "ws://localhost:2500") {
         _aOperacoes[6] = {operacao: 6}; // Confirmação
         _aOperacoes[101] = {operacao: 101, valorTransacao: 0}; // Débito
-        _aOperacoes[101] = {operacao: 106, valorTransacao: 0}; // Voucher
+        _aOperacoes[106] = {operacao: 106, valorTransacao: 0}; // Voucher
         _aOperacoes[112] = {operacao: 112, valorTransacao: 0}; // Crédito A Vista
         _aOperacoes[113] = {operacao: 113, valorTransacao: 0, numeroParcelas: 0}; // Crédito Parcelado Lojista (sem juros)
         _aOperacoes[114] = {operacao: 114, valorTransacao: 0, numeroParcelas: 0}; // Crédito Parcelado Administradora (com juros)
@@ -35,6 +37,8 @@ var AuttarSDK = (function () {
         _url = p_url;
         _connect.bind(this);
         _disconnect.bind(this);
+        _timeout.bind(this);
+        _clearTimeout.bind(this);
     }
 
     function _connect(p_oOperacao) {
@@ -57,23 +61,52 @@ var AuttarSDK = (function () {
                     }
                 }
             }
-            _ws.onopen = function () {
-                this.send(JSON.stringify(p_oOperacao));
+
+            _timeout();
+
+            _ws.onopen = function (evt) {
+                _clearTimeout();
+                _ws.send(JSON.stringify(p_oOperacao));
+                _timeout(60000);
             };
+            
             _ws.onmessage = function (evtMsg) {
+                _clearTimeout();
                 resolve(evtMsg);
             };
+            
             _ws.onerror = function (evtError) {
+                _clearTimeout();
                 reject(evtError);
             };
+            
             _ws.onclose = function (evtClose) {
-                console.log(evtClose);
+                _clearTimeout();
+                reject(evtClose);
             };
+            
         });
     }
 
     function _disconnect() {
         _ws.close();
+    }
+
+    function _timeout(p_time = 10000) {
+        _close = true;
+        _timeoutConn = setTimeout(function () {
+            console.log("setTimeout", _close);
+            if (_close) {
+                _ws.close();
+            } else {
+                _clearTimeout();
+            }
+        }, p_time);
+    }
+
+    function _clearTimeout() {
+        _close = false;
+        clearTimeout(_timeoutConn);
     }
 
     /*
@@ -86,10 +119,10 @@ var AuttarSDK = (function () {
      * @param {type} p_nOper
      * @returns {Json}
      */
-    AuttarSDK.prototype.Debito = async function (p_valor, p_nOper = 101) {
+    AuttarSDK.prototype.Debito = function (p_valor, p_nOper = 101) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
-        return await _connect(operacao);
+        return _connect(operacao);
     };
     /*
      * 
@@ -97,10 +130,10 @@ var AuttarSDK = (function () {
      * @param {type} p_nOper
      * @returns {Json}
      */
-    AuttarSDK.prototype.Voucher = async function (p_valor, p_nOper = 106) {
+    AuttarSDK.prototype.Voucher = function (p_valor, p_nOper = 106) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
-        return await _connect(operacao);
+        return _connect(operacao);
     };
     /*
      * 
@@ -108,10 +141,10 @@ var AuttarSDK = (function () {
      * @param {type} p_nOper
      * @returns {Json}
      */
-    AuttarSDK.prototype.CreditoAVista = async function (p_valor, p_nOper = 112) {
+    AuttarSDK.prototype.CreditoAVista = function (p_valor, p_nOper = 112) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
-        return await _connect(operacao);
+        return _connect(operacao);
     };
     /**
      * 
@@ -120,11 +153,11 @@ var AuttarSDK = (function () {
      * @param {int} p_nOper 
      * @returns {Json}
      */
-    AuttarSDK.prototype.CreditoParceladoLojista = async function (p_valor, p_parcelas, p_nOper = 113) {
+    AuttarSDK.prototype.CreditoParceladoLojista = function (p_valor, p_parcelas, p_nOper = 113) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
         operacao.numeroParcelas = p_parcelas;
-        return await _connect(operacao);
+        return _connect(operacao);
     };
     /**
      * 
@@ -133,24 +166,24 @@ var AuttarSDK = (function () {
      * @param {int} p_nOper 
      * @returns {Json}
      */
-    AuttarSDK.prototype.CreditoParceladoAdm = async function (p_valor, p_parcelas, p_nOper = 114) {
+    AuttarSDK.prototype.CreditoParceladoAdm = function (p_valor, p_parcelas, p_nOper = 114) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
         operacao.numeroParcelas = p_parcelas;
-        return await _connect(operacao);
+        return _connect(operacao);
     };
 
     /*
      * Operações de controle
      */
-    AuttarSDK.prototype.ConfirmaOperacao = async function (p_nOper = 6) {
+    AuttarSDK.prototype.ConfirmaOperacao = function (p_nOper = 6) {
         const operacao = _aOperacoes[p_nOper];
-        return await _connect(operacao);
+        return _connect(operacao);
     };
 
-    AuttarSDK.prototype.DesfazimentoTotal = async function (p_nOper = 191) {
+    AuttarSDK.prototype.DesfazimentoTotal = function (p_nOper = 191) {
         const operacao = _aOperacoes[p_nOper];
-        return await _connect(operacao);
+        return _connect(operacao);
     };
 
     /*
@@ -164,12 +197,12 @@ var AuttarSDK = (function () {
      * @param {int} p_nOper
      * @returns {Json}
      */
-    AuttarSDK.prototype.Cancelamento = async function (p_valor, p_dataTransacao, p_nsuCTF, p_nOper = 128) {
+    AuttarSDK.prototype.Cancelamento = function (p_valor, p_dataTransacao, p_nsuCTF, p_nOper = 128) {
         const operacao = _aOperacoes[p_nOper];
         operacao.valorTransacao = p_valor;
         operacao.dataTransacao = p_dataTransacao;
         operacao.nsuCTF = p_nsuCTF;
-        return await _connect(operacao);
+        return _connect(operacao);
     };
 
     return AuttarSDK;
